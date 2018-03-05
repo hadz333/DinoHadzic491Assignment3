@@ -23,6 +23,17 @@ var index = 0;
 var game_is_over = false;
 var goombas_destroyed = 0;
 
+var socket = io.connect("http://24.16.255.56:8888");
+
+socket.on("load", function (data) {
+    console.log(data);
+});
+
+socket.emit("save", { studentname: "Dino Hadzic", statename: "aState", data: "Goodbye World" });
+socket.emit("load", { studentname: "Dino Hadzic", statename: "aState" });
+socket.emit("load", { studentname: "Dino Hadzic", statename: "theState" });
+
+
 function Animation(spriteSheet, startX, startY, frameWidth, frameHeight, frameDuration, frames, loop, reverse) {
     this.spriteSheet = spriteSheet;
     this.startX = startX;
@@ -229,6 +240,7 @@ Hero.prototype.update = function () {
           if (closest_right_distance <= 2) {
             // game over
             game_is_over = true;
+            //console.log("GAME OVER - Goomba from right killed you");
             gameEngine.addEntity(new Game_over(gameEngine, AM.getAsset("./img/game_over_bg.png")));
             gameEngine.addEntity(new Score(gameEngine, goombas_destroyed, "yellow", 390, 320));
           }
@@ -241,6 +253,7 @@ Hero.prototype.update = function () {
           if (closest_left_distance <= 2) {
             // game over
             game_is_over = true;
+            //console.log("GAME OVER - Goomba from left killed you");
             gameEngine.addEntity(new Game_over(gameEngine, AM.getAsset("./img/game_over_bg.png")));
             gameEngine.addEntity(new Score(gameEngine, goombas_destroyed, "yellow", 390, 320));
           }
@@ -332,9 +345,6 @@ Goomba_right.prototype.update = function () {
     //     this.x = -12000000;
     //   }
     // }
-    if (closest_from_right_distance == 0 || closest_from_left_distance == 0) {
-      console.log("GAME OVER");
-    }
 }
 
 function Goomba_left(game, spritesheet) {
@@ -371,7 +381,8 @@ Goomba_left.prototype.update = function () {
     this.boundingbox.x -= this.speed;
     for (var i = 0; i < index; i++) {
       if (goombas[i].x == 255) {
-        console.log("game is over. Goomba number: " + i);
+        if (!game_is_over)
+          console.log("game is over. Goomba number: " + i);
       }
     }
     // //goombas_x[this_index] = this.x;
@@ -386,7 +397,7 @@ Goomba_left.prototype.update = function () {
 }
 
 function Bullet_left(game) {
-  console.log("bullet left");
+  //console.log("bullet left");
   // bullet going left animation here
   this.animation = new Animation(AM.getAsset("./img/hero_right.png"), 0, 0, 28.28, 31, 0.15, 1, true, true);
   this.x = 255;
@@ -424,7 +435,8 @@ Bullet_left.prototype.update = function () {
           if (!game_is_over) {
             goombas_destroyed++;
           }
-          console.log("Goombas destroyed:" + goombas_destroyed)
+          if (!game_is_over)
+            console.log("Goombas destroyed:" + goombas_destroyed);
         }
       }
     }
@@ -437,7 +449,7 @@ Bullet_left.prototype.update = function () {
 }
 
 function Bullet_right() {
-  console.log("bullet right");
+  //console.log("bullet right");
   // bullet going right animation here
   this.animation = new Animation(AM.getAsset("./img/hero_right.png"), 0, 0, 28.28, 31, 0.15, 1, true, true);
   this.x = 255;
@@ -475,7 +487,8 @@ Bullet_right.prototype.update = function () {
           if (!game_is_over) {
             goombas_destroyed++;
           }
-          console.log("Goombas destroyed:" + goombas_destroyed);
+          if (!game_is_over)
+            console.log("Goombas destroyed:" + goombas_destroyed);
         }
       }
     }
