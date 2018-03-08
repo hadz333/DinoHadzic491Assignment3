@@ -22,6 +22,7 @@ var goombas= [];
 var goombas_index = 0;
 var game_is_over = false;
 var goombas_destroyed = 0;
+var saved = false;
 
 var socket = io.connect("http://24.16.255.56:8888");
 
@@ -31,13 +32,21 @@ socket.on("load", function (data) {
     for (var i = 0; i < data.all_goombas.length; i++) {
       console.log(data.all_goombas[i]);
       goombas[i].x = data.all_goombas[i];
+      goombas[i].speed = 1;
+      goombas[i].live = true;
+      if (goombas[i].spawned_between_save_And_load) {
+        console.log("sent to the nether realm!");
+        goombas[i].x = 2290;
+        goombas[i].speed = 0;
+        goombas[i].live = false;
+      }
       //goombas[i].live = true;
     }
-    // for (var i = data.all_goombas.length; i < goombas.length; i++) {
-    //   goombas[i] = 0;
-    //   goombas[i].should_draw = false;
-    //   index = data.all_goombas.length - 1;
-    // }
+    for (var i = data.all_goombas.length - 1; i < goombas.length; i++) {
+      //goombas[i].x = 20000;
+      //goombas[i].should_draw = false;
+      //goombas_index = data.all_goombas.length - 1;
+    }
     goombas_destroyed = data.data;
 });
 
@@ -234,18 +243,27 @@ Hero.prototype.draw = function () {
 }
 
 Hero.prototype.update = function () {
+    if (this != null) {
     //if (this.animation.elapsedTime < this.animation.totalTime * 8 / 14)
     //this.x += this.game.clockTick * this.speed;
     //if (this.x > 400) this.x = 0;
 
     if (this.game.sButton) {
       var goombas_x_vals = [];
+      var goombas_lives = [];
+      var goombas_left_vals = [];
+      var goombas_right_vals = [];
 
       for (var i = 0; i < goombas.length; i++) {
+        goombas[i].spawned_between_save_And_load = false;
         goombas_x_vals[i] = goombas[i].x;
+        goombas_lives[i] = goombas[i].live;
       }
+      saved = true;
       socket.emit("save", { studentname: "Dino Hadzic", statename: "aState",
-                            data: goombas_destroyed, num_goombas: goombas.length, all_goombas: goombas_x_vals });
+                            data: goombas_destroyed, num_goombas: goombas.length, all_goombas: goombas_x_vals,
+                            all_goombas_lives: goombas_lives});
+
     }
 
     if (this.game.lButton) {
@@ -266,7 +284,7 @@ Hero.prototype.update = function () {
         if (distance < closest_right_distance) {
           closest_right_distance = distance;
           //console.log("New closest from right: " + closest_right_distance);
-          if (closest_right_distance <= 2) {
+          if (closest_right_distance <= 2 && closest_right_distance >= -2) {
             // game over
             game_is_over = true;
             //console.log("GAME OVER - Goomba from right killed you");
@@ -279,7 +297,7 @@ Hero.prototype.update = function () {
         if (distance < closest_left_distance) {
           closest_left_distance = distance;
           //console.log("New closest from left: " + closest_left_distance);
-          if (closest_left_distance <= 2) {
+          if (closest_left_distance <= 2 && closest_left_distance >= -2) {
             // game over
             game_is_over = true;
             //console.log("GAME OVER - Goomba from left killed you");
@@ -328,6 +346,7 @@ Hero.prototype.update = function () {
         this.prevTime = this.currentTime;
     	}
     }
+  }
 }
 
 function Goomba_right(game, spritesheet) {
@@ -345,6 +364,11 @@ function Goomba_right(game, spritesheet) {
     this.is_left = false;
     this.is_right = true;
     this.should_draw = true;
+    if (saved) {
+      this.spawned_between_save_and_load = true;
+    } else {
+      this.spawned_between_save_And_load = false;
+    }
     this.boundingbox = new BoundingBox(this.x, this.y, this.rightAnimation.frameWidth, this.rightAnimation.frameHeight);
     this.this_index = goombas_index;
     goombas.push(this);
@@ -352,18 +376,19 @@ function Goomba_right(game, spritesheet) {
 }
 
 Goomba_right.prototype.draw = function () {
-  if (this.live && !game_is_over && this.should_draw) {
+  if (this.live && !game_is_over && this != null) {
     this.rightAnimation.drawFrame(this.game.clockTick, this.ctx, this.x + 150, this.y + 100, 1);
   }
 }
 
 Goomba_right.prototype.update = function () {
+    if (this != null) {
     //if (this.animation.elapsedTime < this.animation.totalTime * 8 / 14)
     //this.x += this.game.clockTick * this.speed;
     //if (this.x > 400) this.x = 0;
     this.x += this.speed;
     this.boundingbox.x += this.speed;
-
+  }
     //goombas_x[this_index] = this.x;
     // var distance = hero_x - this.x;
     // if (distance < closest_from_left_distance) {
@@ -392,6 +417,11 @@ function Goomba_left(game, spritesheet) {
     this.is_left = true;
     this.is_right = false;
     this.should_draw = true;
+    if (saved) {
+      this.spawned_between_save_and_load = true;
+    } else {
+      this.spawned_between_save_And_load = false;
+    }
     this.boundingbox = new BoundingBox(this.x, this.y, 61.25, 64);
     this.this_index = goombas_index;
     goombas.push(this);
@@ -399,21 +429,24 @@ function Goomba_left(game, spritesheet) {
 }
 
 Goomba_left.prototype.draw = function () {
-  if (this.live && !game_is_over && this.should_draw) {
+  if (this.live && !game_is_over && this != null) {
     this.leftAnimation.drawFrame(this.game.clockTick, this.ctx, this.x + 150, this.y + 100, 1);
   }
 }
 
 Goomba_left.prototype.update = function () {
+  if (this != null) {
     //if (this.animation.elapsedTime < this.animation.totalTime * 8 / 14)
     //this.x += this.game.clockTick * this.speed;
     //if (this.x > 400) this.x = 0;
     this.x -= this.speed;
     this.boundingbox.x -= this.speed;
     for (var i = 0; i < goombas_index; i++) {
-      if (goombas[i].x == 255) {
-        if (!game_is_over)
-          console.log("game is over. Goomba number: " + i);
+      if (goombas[i] != null) {
+        if (goombas[i].x == 255) {
+          if (!game_is_over)
+            console.log("game is over. Goomba number: " + i);
+        }
       }
     }
     // //goombas_x[this_index] = this.x;
@@ -425,6 +458,7 @@ Goomba_left.prototype.update = function () {
     //     this.x = 12000000;
     //   }
     // }
+  }
 }
 
 function Bullet_left(game) {
@@ -456,6 +490,7 @@ Bullet_left.prototype.update = function () {
 
     for (var i = 0; i < num_bullets; i++) {
       for (var j = 0; j < goombas_index; j++) {
+        if (goombas[j] != null) {
         if ((bullets[i].x >= goombas[j].x - 3) && (bullets[i].x <= goombas[j].x + 3)) {
           bullets[i].x = 1500;
           bullets[i].speed = 0;
@@ -469,6 +504,7 @@ Bullet_left.prototype.update = function () {
           if (!game_is_over)
             console.log("Goombas destroyed:" + goombas_destroyed);
         }
+      }
       }
     }
     // if (this.x < furthest_left_bullet_x) {
@@ -508,6 +544,7 @@ Bullet_right.prototype.update = function () {
 
     for (var i = 0; i < num_bullets; i++) {
       for (var j = 0; j < goombas_index; j++) {
+        if (goombas[j] != null) {
         if ((bullets[i].x >= goombas[j].x - 3) && (bullets[i].x <= goombas[j].x + 3)) {
           bullets[i].x = 1500;
           bullets[i].speed = 0;
@@ -521,6 +558,7 @@ Bullet_right.prototype.update = function () {
           if (!game_is_over)
             console.log("Goombas destroyed:" + goombas_destroyed);
         }
+      }
       }
     }
     // if (this.x > furthest_right_bullet_x) {
