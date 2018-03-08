@@ -19,7 +19,7 @@ var furthest_left_bullet_x = 255;
 var num_bullets = 0;
 var bullets = [];
 var goombas= [];
-var index = 0;
+var goombas_index = 0;
 var game_is_over = false;
 var goombas_destroyed = 0;
 
@@ -27,11 +27,27 @@ var socket = io.connect("http://24.16.255.56:8888");
 
 socket.on("load", function (data) {
     console.log(data);
+    console.log(data.num_goombas);
+    for (var i = 0; i < data.all_goombas.length; i++) {
+      console.log(data.all_goombas[i]);
+      goombas[i].x = data.all_goombas[i];
+      //goombas[i].live = true;
+    }
+    // for (var i = data.all_goombas.length; i < goombas.length; i++) {
+    //   goombas[i] = 0;
+    //   goombas[i].should_draw = false;
+    //   index = data.all_goombas.length - 1;
+    // }
+    goombas_destroyed = data.data;
 });
 
-socket.emit("save", { studentname: "Dino Hadzic", statename: "aState", data: "Goodbye World" });
-socket.emit("load", { studentname: "Dino Hadzic", statename: "aState" });
-socket.emit("load", { studentname: "Dino Hadzic", statename: "theState" });
+//socket.on("save", function() {
+//
+//});
+
+
+
+//socket.emit("load", { studentname: "Dino Hadzic", statename: "theState" });
 
 
 function Animation(spriteSheet, startX, startY, frameWidth, frameHeight, frameDuration, frames, loop, reverse) {
@@ -222,9 +238,22 @@ Hero.prototype.update = function () {
     //this.x += this.game.clockTick * this.speed;
     //if (this.x > 400) this.x = 0;
 
+    if (this.game.sButton) {
+      var goombas_x_vals = [];
+
+      for (var i = 0; i < goombas.length; i++) {
+        goombas_x_vals[i] = goombas[i].x;
+      }
+      socket.emit("save", { studentname: "Dino Hadzic", statename: "aState",
+                            data: goombas_destroyed, num_goombas: goombas.length, all_goombas: goombas_x_vals });
+    }
+
+    if (this.game.lButton) {
+      socket.emit("load", { studentname: "Dino Hadzic", statename: "aState" });
+    }
     var closest_left_distance = 1000;
     var closest_right_distance = 1000;
-    for (var i = 0; i < index; i++) {
+    for (var i = 0; i < goombas_index; i++) {
       // var distance = this.x - hero_x;
       // if (distance < closest_from_right_distance) {
       //   closest_from_right_distance = distance;
@@ -315,14 +344,15 @@ function Goomba_right(game, spritesheet) {
     this.live = true;
     this.is_left = false;
     this.is_right = true;
+    this.should_draw = true;
     this.boundingbox = new BoundingBox(this.x, this.y, this.rightAnimation.frameWidth, this.rightAnimation.frameHeight);
-    this.this_index = index;
+    this.this_index = goombas_index;
     goombas.push(this);
-    index += 1;
+    goombas_index += 1;
 }
 
 Goomba_right.prototype.draw = function () {
-  if (this.live && !game_is_over) {
+  if (this.live && !game_is_over && this.should_draw) {
     this.rightAnimation.drawFrame(this.game.clockTick, this.ctx, this.x + 150, this.y + 100, 1);
   }
 }
@@ -361,14 +391,15 @@ function Goomba_left(game, spritesheet) {
     this.live = true;
     this.is_left = true;
     this.is_right = false;
+    this.should_draw = true;
     this.boundingbox = new BoundingBox(this.x, this.y, 61.25, 64);
-    this.this_index = index;
+    this.this_index = goombas_index;
     goombas.push(this);
-    index += 1;
+    goombas_index += 1;
 }
 
 Goomba_left.prototype.draw = function () {
-  if (this.live && !game_is_over) {
+  if (this.live && !game_is_over && this.should_draw) {
     this.leftAnimation.drawFrame(this.game.clockTick, this.ctx, this.x + 150, this.y + 100, 1);
   }
 }
@@ -379,7 +410,7 @@ Goomba_left.prototype.update = function () {
     //if (this.x > 400) this.x = 0;
     this.x -= this.speed;
     this.boundingbox.x -= this.speed;
-    for (var i = 0; i < index; i++) {
+    for (var i = 0; i < goombas_index; i++) {
       if (goombas[i].x == 255) {
         if (!game_is_over)
           console.log("game is over. Goomba number: " + i);
@@ -406,7 +437,7 @@ function Bullet_left(game) {
   this.game = game;
   this.ctx = game.ctx;
   this.live = true;
-  this.this_index = index;
+  this.this_index = goombas_index;
   bullets.push(this);
   num_bullets += 1;
   this.boundingbox = new BoundingBox(this.x, this.y, this.animation.frameWidth, this.animation.frameHeight);
@@ -424,7 +455,7 @@ Bullet_left.prototype.update = function () {
     this.boundingbox.x -= this.speed;
 
     for (var i = 0; i < num_bullets; i++) {
-      for (var j = 0; j < index; j++) {
+      for (var j = 0; j < goombas_index; j++) {
         if ((bullets[i].x >= goombas[j].x - 3) && (bullets[i].x <= goombas[j].x + 3)) {
           bullets[i].x = 1500;
           bullets[i].speed = 0;
@@ -458,7 +489,7 @@ function Bullet_right() {
   this.game = gameEngine;
   this.ctx = gameEngine.ctx;
   this.live = true;
-  this.this_index = index;
+  this.this_index = goombas_index;
   bullets.push(this);
   num_bullets += 1;
   this.boundingbox = new BoundingBox(this.x, this.y, this.animation.frameWidth, this.animation.frameHeight);
@@ -476,7 +507,7 @@ Bullet_right.prototype.update = function () {
     this.boundingbox.x += this.speed;
 
     for (var i = 0; i < num_bullets; i++) {
-      for (var j = 0; j < index; j++) {
+      for (var j = 0; j < goombas_index; j++) {
         if ((bullets[i].x >= goombas[j].x - 3) && (bullets[i].x <= goombas[j].x + 3)) {
           bullets[i].x = 1500;
           bullets[i].speed = 0;

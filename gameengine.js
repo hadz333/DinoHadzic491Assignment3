@@ -52,9 +52,15 @@ GameEngine.prototype.startInput = function () {
           console.log("up");
           that.upButton = true;
         }
-        if (e.keyCode == 88) {
-          console.log("headbutt");
-          that.xButton = true;
+        if (e.keyCode == 83) {
+          // save (s)
+          console.log("save");
+          that.sButton = true;
+        }
+        if (e.keyCode == 76) {
+          // load (l)
+          console.log("load");
+          that.lButton = true;
         }
         //        console.log(e);
 
@@ -76,9 +82,15 @@ GameEngine.prototype.startInput = function () {
           console.log("up");
           that.upButton = false;
         }
-        if (e.keyCode == 88) {
-          console.log("headbutt");
-          that.xButton = false;
+        if (e.keyCode == 83) {
+          // save (s)
+          console.log("save");
+          that.sButton = false;
+        }
+        if (e.keyCode == 76) {
+          // load (l)
+          console.log("load");
+          that.lButton = false;
         }
         console.log("Key Up Event - Char " + e.code + " Code " + e.keyCode);
     }, false);
@@ -185,6 +197,8 @@ GameEngine.prototype.loop = function () {
     this.leftButton = null;
     this.upButton = null;
     this.xButton = null;
+    this.sButton = null;
+    this.lButton = null;
 }
 
 function Timer() {
