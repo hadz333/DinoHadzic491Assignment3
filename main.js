@@ -23,25 +23,41 @@ var goombas_index = 0;
 var game_is_over = false;
 var goombas_destroyed = 0;
 var saved = false;
+var goomba_manager;
 
 var socket = io.connect("http://24.16.255.56:8888");
 
 socket.on("load", function (data) {
+    goomba_manager.goombas = [];
+    goombas_index = 0;
     console.log(data);
     console.log(data.num_goombas);
     for (var i = 0; i < data.all_goombas.length; i++) {
       console.log(data.all_goombas[i]);
-      goombas[i].x = data.all_goombas[i];
-      goombas[i].speed = 1;
-      goombas[i].live = true;
-      if (goombas[i].spawned_between_save_And_load) {
-        console.log("sent to the nether realm!");
-        goombas[i].x = 2290;
-        goombas[i].speed = 0;
-        goombas[i].live = false;
+      var saved_goomba_x = data.all_goombas[i];
+      if (saved_goomba_x != 2290) {
+        if (saved_goomba_x >= 255) {
+          var goomba_loaded = new Goomba_left(gameEngine, AM.getAsset("./img/goomba_sheet.png"), saved_goomba_x);
+          //gameEngine.addEntity(goomba_loaded);
+          goomba_manager.goombas.push(goomba_loaded);
+        } else {
+          var goomba_loaded = new Goomba_right(gameEngine, AM.getAsset("./img/goomba_sheet.png"), saved_goomba_x);
+          //gameEngine.addEntity(goomba_loaded);
+          goomba_manager.goombas.push(goomba_loaded);
+        }
       }
+      // goombas[i].x = data.all_goombas[i];
+      // goombas[i].speed = 1;
+      // goombas[i].live = true;
+      // if (goombas[i].spawned_between_save_And_load) {
+      //   console.log("sent to the nether realm!");
+      //   goombas[i].x = 2290;
+      //   goombas[i].speed = 0;
+      //   goombas[i].live = false;
+      // }
       //goombas[i].live = true;
     }
+    goombas_index = goombas.length;
     for (var i = data.all_goombas.length - 1; i < goombas.length; i++) {
       //goombas[i].x = 20000;
       //goombas[i].should_draw = false;
@@ -254,14 +270,14 @@ Hero.prototype.update = function () {
       var goombas_left_vals = [];
       var goombas_right_vals = [];
 
-      for (var i = 0; i < goombas.length; i++) {
-        goombas[i].spawned_between_save_And_load = false;
-        goombas_x_vals[i] = goombas[i].x;
-        goombas_lives[i] = goombas[i].live;
+      for (var i = 0; i < goomba_manager.goombas.length; i++) {
+        goomba_manager.goombas[i].spawned_between_save_And_load = false;
+        goombas_x_vals[i] = goomba_manager.goombas[i].x;
+        goombas_lives[i] = goomba_manager.goombas[i].live;
       }
       saved = true;
       socket.emit("save", { studentname: "Dino Hadzic", statename: "aState",
-                            data: goombas_destroyed, num_goombas: goombas.length, all_goombas: goombas_x_vals,
+                            data: goombas_destroyed, num_goombas: goomba_manager.goombas.length, all_goombas: goombas_x_vals,
                             all_goombas_lives: goombas_lives});
 
     }
@@ -271,7 +287,7 @@ Hero.prototype.update = function () {
     }
     var closest_left_distance = 1000;
     var closest_right_distance = 1000;
-    for (var i = 0; i < goombas_index; i++) {
+    for (var i = 0; i < goomba_manager.goombas.length; i++) {
       // var distance = this.x - hero_x;
       // if (distance < closest_from_right_distance) {
       //   closest_from_right_distance = distance;
@@ -279,8 +295,8 @@ Hero.prototype.update = function () {
       //   if (this.x = furthest_right_bullet_x) {
       //     this.x = 12000000;
       //   }
-      if (goombas[i].is_left && goombas[i].live) {
-        var distance = goombas[i].x - this.x;
+      if (goomba_manager.goombas[i].is_left && goomba_manager.goombas[i].live) {
+        var distance = goomba_manager.goombas[i].x - this.x;
         if (distance < closest_right_distance) {
           closest_right_distance = distance;
           //console.log("New closest from right: " + closest_right_distance);
@@ -292,8 +308,8 @@ Hero.prototype.update = function () {
             gameEngine.addEntity(new Score(gameEngine, goombas_destroyed, "yellow", 390, 320));
           }
         }
-      } else if (goombas[i].is_right && goombas[i].live) {
-        var distance = this.x - goombas[i].x;
+      } else if (goomba_manager.goombas[i].is_right && goomba_manager.goombas[i].live) {
+        var distance = this.x - goomba_manager.goombas[i].x;
         if (distance < closest_left_distance) {
           closest_left_distance = distance;
           //console.log("New closest from left: " + closest_left_distance);
@@ -322,14 +338,16 @@ Hero.prototype.update = function () {
       var left_or_right = type % 2;
       switch (left_or_right) {
         case 0:
-          gameEngine.addEntity(new Goomba_left(gameEngine, AM.getAsset("./img/goomba_sheet.png")));
+          //gameEngine.addEntity(new Goomba_left(gameEngine, AM.getAsset("./img/goomba_sheet.png"), 800));
+          goomba_manager.goombas.push(new Goomba_left(gameEngine, AM.getAsset("./img/goomba_sheet.png"), 800));
           break;
         case 1:
-          gameEngine.addEntity(new Goomba_right(gameEngine, AM.getAsset("./img/goomba_sheet.png")));
+          goomba_manager.goombas.push(new Goomba_right(gameEngine, AM.getAsset("./img/goomba_sheet.png"), -200));
           break;
       }
       this.prevTime2 = this.currentTime;
     }
+
 
     if (this.Right) {
       // implement a timer here
@@ -349,9 +367,9 @@ Hero.prototype.update = function () {
   }
 }
 
-function Goomba_right(game, spritesheet) {
+function Goomba_right(game, spritesheet, start_x) {
     this.rightAnimation = new Animation(spritesheet, 0, 64, 61.25, 64, 0.07, 4, true, false);
-    this.x = -200;
+    this.x = start_x;
     this.y = 285;
     this.speed = 1;
     this.game = game;
@@ -402,9 +420,9 @@ Goomba_right.prototype.update = function () {
     // }
 }
 
-function Goomba_left(game, spritesheet) {
+function Goomba_left(game, spritesheet, start_x) {
     this.leftAnimation = new Animation(spritesheet, 0, 0, 61.25, 64, 0.07, 4, true, false);
-    this.x = 800;
+    this.x = start_x;
     this.y = 285;
     this.speed = 1;
     this.game = game;
@@ -424,7 +442,7 @@ function Goomba_left(game, spritesheet) {
     }
     this.boundingbox = new BoundingBox(this.x, this.y, 61.25, 64);
     this.this_index = goombas_index;
-    goombas.push(this);
+    //goomba_manager.goombas.push(this);
     goombas_index += 1;
 }
 
@@ -441,9 +459,9 @@ Goomba_left.prototype.update = function () {
     //if (this.x > 400) this.x = 0;
     this.x -= this.speed;
     this.boundingbox.x -= this.speed;
-    for (var i = 0; i < goombas_index; i++) {
-      if (goombas[i] != null) {
-        if (goombas[i].x == 255) {
+    for (var i = 0; i < goomba_manager.goombas.length; i++) {
+      if (goomba_manager.goombas[i] != null) {
+        if (goomba_manager.goombas[i].x == 255) {
           if (!game_is_over)
             console.log("game is over. Goomba number: " + i);
         }
@@ -489,15 +507,15 @@ Bullet_left.prototype.update = function () {
     this.boundingbox.x -= this.speed;
 
     for (var i = 0; i < num_bullets; i++) {
-      for (var j = 0; j < goombas_index; j++) {
-        if (goombas[j] != null) {
-        if ((bullets[i].x >= goombas[j].x - 3) && (bullets[i].x <= goombas[j].x + 3)) {
+      for (var j = 0; j < goomba_manager.goombas.length; j++) {
+        if (goomba_manager.goombas[j] != null) {
+        if ((bullets[i].x >= goomba_manager.goombas[j].x - 3) && (bullets[i].x <= goomba_manager.goombas[j].x + 3)) {
           bullets[i].x = 1500;
           bullets[i].speed = 0;
-          goombas[j].x = 2290;
-          goombas[j].speed = 0;
+          goomba_manager.goombas[j].x = 2290;
+          goomba_manager.goombas[j].speed = 0;
           bullets[i].live = false;
-          goombas[j].live = false;
+          goomba_manager.goombas[j].live = false;
           if (!game_is_over) {
             goombas_destroyed++;
           }
@@ -543,15 +561,15 @@ Bullet_right.prototype.update = function () {
     this.boundingbox.x += this.speed;
 
     for (var i = 0; i < num_bullets; i++) {
-      for (var j = 0; j < goombas_index; j++) {
-        if (goombas[j] != null) {
-        if ((bullets[i].x >= goombas[j].x - 3) && (bullets[i].x <= goombas[j].x + 3)) {
+      for (var j = 0; j < goomba_manager.goombas.length; j++) {
+        if (goomba_manager.goombas[j] != null) {
+        if ((bullets[i].x >= goomba_manager.goombas[j].x - 3) && (bullets[i].x <= goomba_manager.goombas[j].x + 3)) {
           bullets[i].x = 1500;
           bullets[i].speed = 0;
-          goombas[j].x = 2290;
-          goombas[j].speed = 0;
+          goomba_manager.goombas[j].x = 2290;
+          goomba_manager.goombas[j].speed = 0;
           bullets[i].live = false;
-          goombas[j].live = false;
+          goomba_manager.goombas[j].live = false;
           if (!game_is_over) {
             goombas_destroyed++;
           }
@@ -570,32 +588,33 @@ Bullet_right.prototype.update = function () {
     // }
 }
 
-function Helicopter(game, spritesheet) {
-    this.animation = new Animation(spritesheet, 0, 0, 423, 150, 0.2, 4, 1, true);
-    this.speed = 350;
-    this.y = 0;
-    this.ctx = game.ctx;
-    Entity.call(this, game, 0, 20);
+function Goomba_Manager(game) {
+	this.goombas = [];
+	this.game = game;
 }
 
-Helicopter.prototype = new Entity();
-Helicopter.prototype.constructor = Helicopter;
+Goomba_Manager.prototype = new Entity();
+Goomba_Manager.prototype.constructor = Goomba_Manager;
 
-Helicopter.prototype.update = function () {
-    this.x += this.game.clockTick * this.speed;
-    if (this.x > 1000) this.x = -430;
-    Entity.prototype.update.call(this);
+Goomba_Manager.prototype.draw = function () {
+	//if(!this.game.running || (!this.game.running && this.game.over)) return;
+	var num_goombas = this.goombas.length;
+	for(i = 0; i < num_goombas; i++) {
+		this.goombas[i].draw();
+	}
 }
 
-Helicopter.prototype.draw = function () {
-    this.animation.drawFrame(this.game.clockTick, this.ctx, this.x, this.y);
-    Entity.prototype.draw.call(this);
+Goomba_Manager.prototype.update = function () {
+	//if(!this.game.running || (!this.game.running && this.game.over)) return;
+	var num_goombas = this.goombas.length;
+	for(i = 0; i < num_goombas; i++) {
+		this.goombas[i].update();
+	}
 }
 
 AM.queueDownload("./img/rainy.gif");
 AM.queueDownload("./img/hero.png");
 AM.queueDownload("./img/hero_right.png");
-AM.queueDownload("./img/helicopter.png");
 AM.queueDownload("./img/goomba_sheet.png");
 AM.queueDownload("./img/game_over_bg.png");
 
@@ -607,11 +626,12 @@ AM.downloadAll(function () {
     gameEngine.init(ctx);
     gameEngine.start();
     gameEngine.addEntity(new Background(gameEngine, AM.getAsset("./img/rainy.gif")));
-    gameEngine.addEntity(new Helicopter(gameEngine, AM.getAsset("./img/helicopter.png")));
     gameEngine.addEntity(new Hero(gameEngine, AM.getAsset("./img/hero.png")));
-    gameEngine.addEntity(new Goomba_left(gameEngine, AM.getAsset("./img/goomba_sheet.png")));
-    gameEngine.addEntity(new Goomba_right(gameEngine, AM.getAsset("./img/goomba_sheet.png")));
+    //gameEngine.addEntity(new Goomba_left(gameEngine, AM.getAsset("./img/goomba_sheet.png"), 800));
+    //gameEngine.addEntity(new Goomba_right(gameEngine, AM.getAsset("./img/goomba_sheet.png"), -200));
     gameEngine.addEntity(new Score(gameEngine, goombas_destroyed, "yellow", 390, 320));
+    goomba_manager = new Goomba_Manager(gameEngine);
+    gameEngine.addEntity(goomba_manager);
 
     console.log("All Done!");
 });
