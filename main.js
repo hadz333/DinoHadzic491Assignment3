@@ -16,7 +16,6 @@ var closest_from_right_distance = 1000;
 var closest_from_left_distance = 1000;
 var furthest_right_bullet_x = 255;
 var furthest_left_bullet_x = 255;
-var num_bullets = 0;
 var bullets = [];
 var goombas= [];
 var goombas_index = 0;
@@ -24,11 +23,13 @@ var game_is_over = false;
 var goombas_destroyed = 0;
 var saved = false;
 var goomba_manager;
+var bullet_manager;
 
 var socket = io.connect("http://24.16.255.56:8888");
 
 socket.on("load", function (data) {
     goomba_manager.goombas = [];
+    bullet_manager.bullets = [];
     goombas_index = 0;
     console.log(data);
     console.log(data.num_goombas);
@@ -46,16 +47,16 @@ socket.on("load", function (data) {
           goomba_manager.goombas.push(goomba_loaded);
         }
       }
-      // goombas[i].x = data.all_goombas[i];
-      // goombas[i].speed = 1;
-      // goombas[i].live = true;
-      // if (goombas[i].spawned_between_save_And_load) {
-      //   console.log("sent to the nether realm!");
-      //   goombas[i].x = 2290;
-      //   goombas[i].speed = 0;
-      //   goombas[i].live = false;
-      // }
-      //goombas[i].live = true;
+    }
+    for (var i = 0; i < data.all_bullets.length; i++) {
+      var saved_bullet_x = data.all_bullets[i];
+      if (saved_bullet_x < 255) {
+        var bullet_loaded = new Bullet_left(gameEngine, saved_bullet_x);
+        bullet_manager.bullets.push(bullet_loaded);
+      } else {
+        var bullet_loaded = new Bullet_right(gameEngine, saved_bullet_x);
+        bullet_manager.bullets.push(bullet_loaded);
+      }
     }
     goombas_index = goombas.length;
     for (var i = data.all_goombas.length - 1; i < goombas.length; i++) {
@@ -269,6 +270,11 @@ Hero.prototype.update = function () {
       var goombas_lives = [];
       var goombas_left_vals = [];
       var goombas_right_vals = [];
+      var bullet_x_vals = [];
+
+      for (var i = 0; i < bullet_manager.bullets.length; i++) {
+        bullet_x_vals[i] = bullet_manager.bullets[i].x;
+      }
 
       for (var i = 0; i < goomba_manager.goombas.length; i++) {
         goomba_manager.goombas[i].spawned_between_save_And_load = false;
@@ -278,7 +284,7 @@ Hero.prototype.update = function () {
       saved = true;
       socket.emit("save", { studentname: "Dino Hadzic", statename: "aState",
                             data: goombas_destroyed, num_goombas: goomba_manager.goombas.length, all_goombas: goombas_x_vals,
-                            all_goombas_lives: goombas_lives});
+                            all_goombas_lives: goombas_lives, all_bullets: bullet_x_vals});
 
     }
 
@@ -352,7 +358,7 @@ Hero.prototype.update = function () {
     if (this.Right) {
       // implement a timer here
       if (this.currentTime - this.prevTime >= 1.2) {
-    		gameEngine.addEntity(new Bullet_right(gameEngine));
+    		bullet_manager.bullets.push(new Bullet_right(gameEngine, 255));
         this.prevTime = this.currentTime;
     	}
     }
@@ -360,7 +366,7 @@ Hero.prototype.update = function () {
     if (this.Left) {
       // implement a timer here
       if (this.currentTime - this.prevTime >= 1.2) {
-    		gameEngine.addEntity(new Bullet_left(gameEngine));
+    		bullet_manager.bullets.push(new Bullet_left(gameEngine, 254));
         this.prevTime = this.currentTime;
     	}
     }
@@ -479,19 +485,19 @@ Goomba_left.prototype.update = function () {
   }
 }
 
-function Bullet_left(game) {
+function Bullet_left(game, start_x) {
   //console.log("bullet left");
   // bullet going left animation here
   this.animation = new Animation(AM.getAsset("./img/hero_right.png"), 0, 0, 28.28, 31, 0.15, 1, true, true);
-  this.x = 255;
+  this.x = start_x;
   this.y = 280;
-  this.speed = 3;
+  this.speed = 1.5;
   this.game = game;
   this.ctx = game.ctx;
   this.live = true;
   this.this_index = goombas_index;
-  bullets.push(this);
-  num_bullets += 1;
+  bullet_manager.bullets.push(this);
+  //num_bullets += 1;
   this.boundingbox = new BoundingBox(this.x, this.y, this.animation.frameWidth, this.animation.frameHeight);
 }
 
@@ -506,15 +512,15 @@ Bullet_left.prototype.update = function () {
     this.x -= this.speed;
     this.boundingbox.x -= this.speed;
 
-    for (var i = 0; i < num_bullets; i++) {
+    for (var i = 0; i < bullet_manager.bullets.length; i++) {
       for (var j = 0; j < goomba_manager.goombas.length; j++) {
         if (goomba_manager.goombas[j] != null) {
-        if ((bullets[i].x >= goomba_manager.goombas[j].x - 3) && (bullets[i].x <= goomba_manager.goombas[j].x + 3)) {
-          bullets[i].x = 1500;
-          bullets[i].speed = 0;
+        if ((bullet_manager.bullets[i].x >= goomba_manager.goombas[j].x - 3) && (bullet_manager.bullets[i].x <= goomba_manager.goombas[j].x + 3)) {
+          bullet_manager.bullets[i].x = 1500;
+          bullet_manager.bullets[i].speed = 0;
           goomba_manager.goombas[j].x = 2290;
           goomba_manager.goombas[j].speed = 0;
-          bullets[i].live = false;
+          bullet_manager.bullets[i].live = false;
           goomba_manager.goombas[j].live = false;
           if (!game_is_over) {
             goombas_destroyed++;
@@ -533,19 +539,19 @@ Bullet_left.prototype.update = function () {
     // }
 }
 
-function Bullet_right() {
+function Bullet_right(game, start_x) {
   //console.log("bullet right");
   // bullet going right animation here
   this.animation = new Animation(AM.getAsset("./img/hero_right.png"), 0, 0, 28.28, 31, 0.15, 1, true, true);
-  this.x = 255;
+  this.x = start_x;
   this.y = 280;
-  this.speed = 3;
+  this.speed = 1.5;
   this.game = gameEngine;
   this.ctx = gameEngine.ctx;
   this.live = true;
   this.this_index = goombas_index;
-  bullets.push(this);
-  num_bullets += 1;
+  bullet_manager.bullets.push(this);
+  //num_bullets += 1;
   this.boundingbox = new BoundingBox(this.x, this.y, this.animation.frameWidth, this.animation.frameHeight);
 }
 
@@ -560,15 +566,15 @@ Bullet_right.prototype.update = function () {
     this.x += this.speed;
     this.boundingbox.x += this.speed;
 
-    for (var i = 0; i < num_bullets; i++) {
+    for (var i = 0; i < bullet_manager.bullets.length; i++) {
       for (var j = 0; j < goomba_manager.goombas.length; j++) {
         if (goomba_manager.goombas[j] != null) {
-        if ((bullets[i].x >= goomba_manager.goombas[j].x - 3) && (bullets[i].x <= goomba_manager.goombas[j].x + 3)) {
-          bullets[i].x = 1500;
-          bullets[i].speed = 0;
+        if ((bullet_manager.bullets[i].x >= goomba_manager.goombas[j].x - 3) && (bullet_manager.bullets[i].x <= goomba_manager.goombas[j].x + 3)) {
+          bullet_manager.bullets[i].x = 1500;
+          bullet_manager.bullets[i].speed = 0;
           goomba_manager.goombas[j].x = 2290;
           goomba_manager.goombas[j].speed = 0;
-          bullets[i].live = false;
+          bullet_manager.bullets[i].live = false;
           goomba_manager.goombas[j].live = false;
           if (!game_is_over) {
             goombas_destroyed++;
@@ -599,7 +605,7 @@ Goomba_Manager.prototype.constructor = Goomba_Manager;
 Goomba_Manager.prototype.draw = function () {
 	//if(!this.game.running || (!this.game.running && this.game.over)) return;
 	var num_goombas = this.goombas.length;
-	for(i = 0; i < num_goombas; i++) {
+	for(var i = 0; i < num_goombas; i++) {
 		this.goombas[i].draw();
 	}
 }
@@ -607,8 +613,32 @@ Goomba_Manager.prototype.draw = function () {
 Goomba_Manager.prototype.update = function () {
 	//if(!this.game.running || (!this.game.running && this.game.over)) return;
 	var num_goombas = this.goombas.length;
-	for(i = 0; i < num_goombas; i++) {
+	for(var i = 0; i < num_goombas; i++) {
 		this.goombas[i].update();
+	}
+}
+
+function Bullet_Manager(game) {
+	this.bullets = [];
+	this.game = game;
+}
+
+Bullet_Manager.prototype = new Entity();
+Bullet_Manager.prototype.constructor = Bullet_Manager;
+
+Bullet_Manager.prototype.draw = function () {
+	//if(!this.game.running || (!this.game.running && this.game.over)) return;
+	var num_bullets = this.bullets.length;
+	for(var i = 0; i < num_bullets; i++) {
+		this.bullets[i].draw();
+	}
+}
+
+Bullet_Manager.prototype.update = function () {
+	//if(!this.game.running || (!this.game.running && this.game.over)) return;
+	var num_bullets = this.bullets.length;
+	for(var i = 0; i < num_bullets; i++) {
+		this.bullets[i].update();
 	}
 }
 
@@ -631,7 +661,9 @@ AM.downloadAll(function () {
     //gameEngine.addEntity(new Goomba_right(gameEngine, AM.getAsset("./img/goomba_sheet.png"), -200));
     gameEngine.addEntity(new Score(gameEngine, goombas_destroyed, "yellow", 390, 320));
     goomba_manager = new Goomba_Manager(gameEngine);
+    bullet_manager = new Bullet_Manager(gameEngine);
     gameEngine.addEntity(goomba_manager);
+    gameEngine.addEntity(bullet_manager);
 
     console.log("All Done!");
 });
