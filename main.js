@@ -18,19 +18,24 @@ var furthest_right_bullet_x = 255;
 var furthest_left_bullet_x = 255;
 var bullets = [];
 var goombas= [];
-var goombas_index = 0;
 var game_is_over = false;
 var goombas_destroyed = 0;
 var saved = false;
 var goomba_manager;
 var bullet_manager;
+var current_time;
+var prev_time;
+var prev_time2;
 
 var socket = io.connect("http://24.16.255.56:8888");
 
 socket.on("load", function (data) {
     goomba_manager.goombas = [];
     bullet_manager.bullets = [];
-    goombas_index = 0;
+    current_time = data.time;
+    prev_time = data.previous_time1;
+    prev_time2 = data.previous_time2;
+
     console.log(data);
     console.log(data.data);
     for (var i = 0; i < data.all_goombas.length; i++) {
@@ -48,7 +53,7 @@ socket.on("load", function (data) {
         }
       }
     }
-    for (var i = 0; i < data.all_bullets.length; i++) {
+    for (var i = 0; i < data.all_bullets.length - 1; i++) {
       var saved_bullet_x = data.all_bullets[i];
       if (saved_bullet_x < 255) {
         var bullet_loaded = new Bullet_left(gameEngine, saved_bullet_x);
@@ -58,7 +63,6 @@ socket.on("load", function (data) {
         bullet_manager.bullets.push(bullet_loaded);
       }
     }
-    goombas_index = goombas.length;
     goombas_destroyed = data.data;
 });
 
@@ -237,9 +241,9 @@ function Hero(game, spritesheet) {
     this.Left = false;
     this.Up = false;
     this.live = true;
-    this.currentTime = this.game.clockTick;
-    this.prevTime = this.game.clockTick;
-    this.prevTime2 = this.game.clockTick;
+    current_time = this.game.clockTick;
+    prev_time = this.game.clockTick;
+    prev_time2 = this.game.clockTick;
     this.ctx = game.ctx;
     this.boundingbox = new BoundingBox(this.x, this.y, this.leftAnimation.frameWidth, this.leftAnimation.frameHeight);
 }
@@ -279,7 +283,8 @@ Hero.prototype.update = function () {
       saved = true;
       socket.emit("save", { studentname: "Dino Hadzic", statename: "aState",
                             data: goombas_destroyed, num_goombas: goomba_manager.goombas.length, all_goombas: goombas_x_vals,
-                            all_goombas_lives: goombas_lives, all_bullets: bullet_x_vals});
+                            all_goombas_lives: goombas_lives, all_bullets: bullet_x_vals, time: current_time,
+                            previous_time1: prev_time, previous_time2: prev_time2});
 
     }
 
@@ -333,9 +338,9 @@ Hero.prototype.update = function () {
       this.Left = false;
     }
 
-    this.currentTime += this.game.clockTick;
+    current_time += this.game.clockTick;
     var type = Math.floor(Math.random() * 400) + 1;
-    if (this.currentTime - this.prevTime2 >= type / 10) {
+    if (current_time - prev_time2 >= type / 10) {
       var left_or_right = type % 2;
       switch (left_or_right) {
         case 0:
@@ -346,23 +351,23 @@ Hero.prototype.update = function () {
           goomba_manager.goombas.push(new Goomba_right(gameEngine, AM.getAsset("./img/goomba_sheet.png"), -200));
           break;
       }
-      this.prevTime2 = this.currentTime;
+      prev_time2 = current_time;
     }
 
 
     if (this.Right) {
       // implement a timer here
-      if (this.currentTime - this.prevTime >= 1.2) {
+      if (current_time - prev_time >= 1.2) {
     		bullet_manager.bullets.push(new Bullet_right(gameEngine, 255));
-        this.prevTime = this.currentTime;
+        prev_time = current_time;
     	}
     }
 
     if (this.Left) {
       // implement a timer here
-      if (this.currentTime - this.prevTime >= 1.2) {
+      if (current_time - prev_time >= 1.2) {
     		bullet_manager.bullets.push(new Bullet_left(gameEngine, 254));
-        this.prevTime = this.currentTime;
+        prev_time = current_time;
     	}
     }
   }
@@ -389,9 +394,7 @@ function Goomba_right(game, spritesheet, start_x) {
       this.spawned_between_save_And_load = false;
     }
     this.boundingbox = new BoundingBox(this.x, this.y, this.rightAnimation.frameWidth, this.rightAnimation.frameHeight);
-    this.this_index = goombas_index;
     goombas.push(this);
-    goombas_index += 1;
 }
 
 Goomba_right.prototype.draw = function () {
@@ -442,9 +445,7 @@ function Goomba_left(game, spritesheet, start_x) {
       this.spawned_between_save_And_load = false;
     }
     this.boundingbox = new BoundingBox(this.x, this.y, 61.25, 64);
-    this.this_index = goombas_index;
     //goomba_manager.goombas.push(this);
-    goombas_index += 1;
 }
 
 Goomba_left.prototype.draw = function () {
@@ -490,7 +491,6 @@ function Bullet_left(game, start_x) {
   this.game = game;
   this.ctx = game.ctx;
   this.live = true;
-  this.this_index = goombas_index;
   bullet_manager.bullets.push(this);
   //num_bullets += 1;
   this.boundingbox = new BoundingBox(this.x, this.y, this.animation.frameWidth, this.animation.frameHeight);
@@ -545,7 +545,6 @@ function Bullet_right(game, start_x) {
   this.game = gameEngine;
   this.ctx = gameEngine.ctx;
   this.live = true;
-  this.this_index = goombas_index;
   bullet_manager.bullets.push(this);
   //num_bullets += 1;
   this.boundingbox = new BoundingBox(this.x, this.y, this.animation.frameWidth, this.animation.frameHeight);
