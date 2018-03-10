@@ -32,7 +32,7 @@ socket.on("load", function (data) {
     bullet_manager.bullets = [];
     goombas_index = 0;
     console.log(data);
-    console.log(data.num_goombas);
+    console.log(data.data);
     for (var i = 0; i < data.all_goombas.length; i++) {
       console.log(data.all_goombas[i]);
       var saved_goomba_x = data.all_goombas[i];
@@ -53,17 +53,12 @@ socket.on("load", function (data) {
       if (saved_bullet_x < 255) {
         var bullet_loaded = new Bullet_left(gameEngine, saved_bullet_x);
         bullet_manager.bullets.push(bullet_loaded);
-      } else {
+      } else if (saved_bullet_x < 1000) {
         var bullet_loaded = new Bullet_right(gameEngine, saved_bullet_x);
         bullet_manager.bullets.push(bullet_loaded);
       }
     }
     goombas_index = goombas.length;
-    for (var i = data.all_goombas.length - 1; i < goombas.length; i++) {
-      //goombas[i].x = 20000;
-      //goombas[i].should_draw = false;
-      //goombas_index = data.all_goombas.length - 1;
-    }
     goombas_destroyed = data.data;
 });
 
@@ -519,6 +514,7 @@ Bullet_left.prototype.update = function () {
           bullet_manager.bullets[i].x = 1500;
           bullet_manager.bullets[i].speed = 0;
           goomba_manager.goombas[j].x = 2290;
+          goomba_manager.goombas[j].y = 2290;
           goomba_manager.goombas[j].speed = 0;
           bullet_manager.bullets[i].live = false;
           goomba_manager.goombas[j].live = false;
@@ -573,6 +569,7 @@ Bullet_right.prototype.update = function () {
           bullet_manager.bullets[i].x = 1500;
           bullet_manager.bullets[i].speed = 0;
           goomba_manager.goombas[j].x = 2290;
+          goomba_manager.goombas[j].y = 2290;
           goomba_manager.goombas[j].speed = 0;
           bullet_manager.bullets[i].live = false;
           goomba_manager.goombas[j].live = false;
